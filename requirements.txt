@@ -5,3 +5,4 @@ langchain-community
 chromadb
 langchain-huggingface
 pypdf
+sentence-transformers
