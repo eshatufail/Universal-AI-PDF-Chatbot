@@ -27,7 +27,7 @@ st.caption("Professional PDF Analysis with Sentiment Insights")
 # Note: Google API Key is needed for stable cloud embeddings
 # You can get one for free at: https://aistudio.google.com/
 GROQ_API_KEY = "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"
-GOOGLE_API_KEY = "PASTE_YOUR_GOOGLE_API_KEY_HERE" # Get this for free from Google AI Studio
+GOOGLE_API_KEY = "AIzaSyAi83gu799qgshzuGq2koZ_Jge74kGHzvE" # Get this for free from Google AI Studio
 
 # --- Sidebar ---
 with st.sidebar:
