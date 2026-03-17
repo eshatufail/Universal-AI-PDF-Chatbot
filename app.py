@@ -13,6 +13,7 @@ from langchain_core.output_parsers import StrOutputParser
 st.set_page_config(page_title="AI PDF Reader", page_icon="📚", layout="wide")
 
 # --- Keys ---
+# Behtreen hal ye hai ke aap ye keys Streamlit Secrets mein dalein
 GOOGLE_API_KEY = "AIzaSyAi83gu799qgshzuGq2koZ_Jge74kGHzvE" 
 GROQ_API_KEY = "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"
 
@@ -24,7 +25,8 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload PDF", type="pdf")
     
     if uploaded_file and st.button("Analyze PDF"):
-        with st.spinner("Processing..."):
+        with st.spinner("Processing document..."):
+            # Temporary file save karna
             with open("temp_file.pdf", "wb") as f:
                 f.write(uploaded_file.getbuffer())
             
@@ -35,17 +37,19 @@ with st.sidebar:
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_documents(data)
                 
-                # FIXED MODEL NAME FOR V1BETA
+                # ✅ FIX: Updated model to 'text-embedding-004'
                 embeddings = GoogleGenerativeAIEmbeddings(
-                    model="models/embedding-001", # Yeh version v1beta par default chalta hai
+                    model="models/text-embedding-004", 
                     google_api_key=GOOGLE_API_KEY
                 )
                 
+                # Vector Database setup
                 vector_db = Chroma.from_documents(chunks, embeddings)
                 st.session_state.retriever = vector_db.as_retriever()
-                st.success("Analysis Finished!")
+                st.success("Document Analyzed! Now you can ask questions.")
             except Exception as e:
-                st.error(f"Error: {e}")
+                # Agar phir bhi 404 aaye to ye block error handle karega
+                st.error(f"Technical Error: {e}")
 
 # --- Chat Interface ---
 if "messages" not in st.session_state:
@@ -61,7 +65,7 @@ if prompt := st.chat_input("Ask about the PDF..."):
     
     llm = ChatGroq(groq_api_key=GROQ_API_KEY, model_name="llama-3.3-70b-versatile")
     
-    template = """Use the context to answer. 
+    template = """Use the document context to answer.
     Context: {context}
     Question: {question}
     Answer:"""
@@ -69,6 +73,7 @@ if prompt := st.chat_input("Ask about the PDF..."):
     prompt_md = ChatPromptTemplate.from_template(template)
     retriever = st.session_state.get("retriever")
     context = ""
+    
     if retriever:
         docs = retriever.invoke(prompt)
         context = "\n\n".join([d.page_content for d in docs])
@@ -79,3 +84,4 @@ if prompt := st.chat_input("Ask about the PDF..."):
         response = chain.invoke(prompt)
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
+        
