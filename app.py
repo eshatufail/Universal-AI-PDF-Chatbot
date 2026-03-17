@@ -12,18 +12,7 @@ from langchain_core.output_parsers import StrOutputParser
 # --- Page Config ---
 st.set_page_config(page_title="AI PDF Reader", page_icon="📚", layout="wide")
 
-st.markdown("""
-    <style>
-    .stApp { background: #fdfbf7; }
-    .stButton>button { background-color: #4a5d4e; color: white; border-radius: 10px; width: 100%; }
-    h1 { color: #2c3e50; text-align: center; }
-    </style>
-    """, unsafe_allow_html=True)
-
-st.title("📚 Universal AI PDF Analyst")
-
 # --- Keys ---
-# Note: Google Key is for Embeddings, Groq Key is for Chatting
 GOOGLE_API_KEY = "AIzaSyAi83gu799qgshzuGq2koZ_Jge74kGHzvE" 
 GROQ_API_KEY = "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"
 
@@ -35,7 +24,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload PDF", type="pdf")
     
     if uploaded_file and st.button("Analyze PDF"):
-        with st.spinner("Processing document..."):
+        with st.spinner("Processing..."):
             with open("temp_file.pdf", "wb") as f:
                 f.write(uploaded_file.getbuffer())
             
@@ -46,9 +35,9 @@ with st.sidebar:
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_documents(data)
                 
-                # FIXED: Using a more universal model name
+                # FIXED MODEL NAME FOR V1BETA
                 embeddings = GoogleGenerativeAIEmbeddings(
-                    model="models/text-embedding-004", # Updated from embedding-001
+                    model="models/embedding-001", # Yeh version v1beta par default chalta hai
                     google_api_key=GOOGLE_API_KEY
                 )
                 
@@ -72,7 +61,7 @@ if prompt := st.chat_input("Ask about the PDF..."):
     
     llm = ChatGroq(groq_api_key=GROQ_API_KEY, model_name="llama-3.3-70b-versatile")
     
-    template = """Use the context to answer the question. 
+    template = """Use the context to answer. 
     Context: {context}
     Question: {question}
     Answer:"""
