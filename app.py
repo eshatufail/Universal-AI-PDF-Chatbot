@@ -21,21 +21,32 @@ st.title("📚 Universal AI PDF Analyst")
 st.caption("Upload any PDF (Novel, Study Notes, Tech Docs) and start chatting!")
 
 # --- Sidebar ---
+# --- Sidebar ---
 with st.sidebar:
     st.header("Document Upload")
     pdf_file = st.file_uploader("Upload your PDF here", type=["pdf"])
     if pdf_file and st.button("Analyze Document"):
         with st.spinner("Processing your document..."):
-            with open("temp.pdf", "wb") as f: f.write(pdf_file.getbuffer())
-            loader = PyPDFLoader("temp.pdf")
-            docs = loader.load()
-            # Sahi tarah se split karna
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-            splits = text_splitter.split_documents(docs)
+            # File ko save karna
+            with open("temp.pdf", "wb") as f: 
+                f.write(pdf_file.getbuffer())
             
-            vectorstore = Chroma.from_documents(splits, HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2"))
-            st.session_state.retriever = vectorstore.as_retriever()
-            st.success("Document analyzed! You can ask anything.")
+            # Check karna ke file waqai save hui hai ya nahi
+            if os.path.exists("temp.pdf"):
+                loader = PyPDFLoader("temp.pdf")
+                docs = loader.load()
+                
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+                splits = text_splitter.split_documents(docs)
+                
+                vectorstore = Chroma.from_documents(
+                    splits, 
+                    HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+                )
+                st.session_state.retriever = vectorstore.as_retriever()
+                st.success("Document analyzed! You can ask anything.")
+            else:
+                st.error("File save karne mein masla hua hai. Dubara koshish karein.")
 
 # --- Chat Logic ---
 if "messages" not in st.session_state: st.session_state.messages = []
