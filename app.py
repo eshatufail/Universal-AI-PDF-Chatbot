@@ -1,4 +1,5 @@
 import streamlit as st
+import os  # <--- Yeh line top par hona zaroori hai
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
@@ -18,62 +19,66 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("📚 Universal AI PDF Analyst")
-st.caption("Upload any PDF (Novel, Study Notes, Tech Docs) and start chatting!")
+st.caption("Upload any PDF and chat with it instantly!")
 
-# --- Sidebar ---
 # --- Sidebar ---
 with st.sidebar:
     st.header("Document Upload")
     pdf_file = st.file_uploader("Upload your PDF here", type=["pdf"])
+    
     if pdf_file and st.button("Analyze Document"):
         with st.spinner("Processing your document..."):
-            # File ko save karna
-            with open("temp.pdf", "wb") as f: 
+            # Temporary path define karna
+            temp_path = "temp_uploaded_file.pdf"
+            
+            # File ko write karna
+            with open(temp_path, "wb") as f:
                 f.write(pdf_file.getbuffer())
             
-            # Check karna ke file waqai save hui hai ya nahi
-            if os.path.exists("temp.pdf"):
-                loader = PyPDFLoader("temp.pdf")
-                docs = loader.load()
-                
-                text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-                splits = text_splitter.split_documents(docs)
-                
-                vectorstore = Chroma.from_documents(
-                    splits, 
-                    HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-                )
-                st.session_state.retriever = vectorstore.as_retriever()
-                st.success("Document analyzed! You can ask anything.")
+            # Check karna ke file create hui ya nahi
+            if os.path.exists(temp_path):
+                try:
+                    loader = PyPDFLoader(temp_path)
+                    docs = loader.load()
+                    
+                    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+                    splits = text_splitter.split_documents(docs)
+                    
+                    vectorstore = Chroma.from_documents(
+                        splits, 
+                        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+                    )
+                    st.session_state.retriever = vectorstore.as_retriever()
+                    st.success("Analysis Complete!")
+                except Exception as e:
+                    st.error(f"Error during analysis: {e}")
             else:
-                st.error("File save karne mein masla hua hai. Dubara koshish karein.")
+                st.error("Failed to save the file. Please try again.")
 
 # --- Chat Logic ---
-if "messages" not in st.session_state: st.session_state.messages = []
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).markdown(msg["content"])
 
-if prompt := st.chat_input("Ask about the document or general concepts..."):
+if prompt := st.chat_input("Ask about the document..."):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
     
-    # Apni API Key yahan safe rakhein ya Streamlit secrets use karein
+    # Secure API Key handling
     llm = ChatGroq(groq_api_key="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", model_name="llama-3.3-70b-versatile")
     
     template = """You are an intelligent AI Document Analyst. 
-    1. If the user asks about the uploaded document, provide an answer based strictly on the provided context.
-    2. If the user asks a general conceptual question not found in the document, use your vast general knowledge to explain it clearly.
-    3. Sentiment/Tone Analysis: Also briefly mention if the content discussed is 'Technical', 'Emotional', 'Educational', or 'Complex'.
+    Use the following context to answer. If not in context, use general knowledge.
+    Mention if the tone is Technical, Emotional, or Educational.
 
-    Context (from PDF): {context}
-    
+    Context: {context}
     Question: {question}
     Answer:"""
     
     prompt_template = ChatPromptTemplate.from_template(template)
     
-    # Retrieval
     retriever = st.session_state.get("retriever")
     context = ""
     if retriever:
