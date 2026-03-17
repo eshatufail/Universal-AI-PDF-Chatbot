@@ -12,12 +12,23 @@ from langchain_core.output_parsers import StrOutputParser
 # --- Page Config ---
 st.set_page_config(page_title="AI PDF Reader", page_icon="📚", layout="wide")
 
-# --- Keys ---
-# Behtreen hal ye hai ke aap ye keys Streamlit Secrets mein dalein
-GOOGLE_API_KEY = "AIzaSyAi83gu799qgshzuGq2koZ_Jge74kGHzvE" 
-GROQ_API_KEY = "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"
+# --- Fetching Keys from Streamlit Secrets ---
+# Agar secrets available na hon to ye default keys use karega
+GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", "AIzaSyAi83gu799qgshzuGq2koZ_Jge74kGHzvE")
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "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")
 
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+
+# --- UI Styling ---
+st.markdown("""
+    <style>
+    .stApp { background: #fdfbf7; }
+    .stButton>button { background-color: #4a5d4e; color: white; border-radius: 10px; width: 100%; }
+    h1 { color: #2c3e50; text-align: center; }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("📚 Universal AI PDF Analyst")
 
 # --- Sidebar ---
 with st.sidebar:
@@ -26,7 +37,6 @@ with st.sidebar:
     
     if uploaded_file and st.button("Analyze PDF"):
         with st.spinner("Processing document..."):
-            # Temporary file save karna
             with open("temp_file.pdf", "wb") as f:
                 f.write(uploaded_file.getbuffer())
             
@@ -37,19 +47,18 @@ with st.sidebar:
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_documents(data)
                 
-                # ✅ FIX: Updated model to 'text-embedding-004'
+                # Using Gemini Embeddings (v1beta stable model)
                 embeddings = GoogleGenerativeAIEmbeddings(
-                    model="models/text-embedding-004", 
+                    model="models/embedding-001", 
                     google_api_key=GOOGLE_API_KEY
                 )
                 
                 # Vector Database setup
                 vector_db = Chroma.from_documents(chunks, embeddings)
                 st.session_state.retriever = vector_db.as_retriever()
-                st.success("Document Analyzed! Now you can ask questions.")
+                st.success("Document Analyzed! Ready to chat.")
             except Exception as e:
-                # Agar phir bhi 404 aaye to ye block error handle karega
-                st.error(f"Technical Error: {e}")
+                st.error(f"Analysis Error: {e}")
 
 # --- Chat Interface ---
 if "messages" not in st.session_state:
@@ -72,16 +81,15 @@ if prompt := st.chat_input("Ask about the PDF..."):
     
     prompt_md = ChatPromptTemplate.from_template(template)
     retriever = st.session_state.get("retriever")
-    context = ""
+    context_data = ""
     
     if retriever:
         docs = retriever.invoke(prompt)
-        context = "\n\n".join([d.page_content for d in docs])
+        context_data = "\n\n".join([d.page_content for d in docs])
     
-    chain = ({"context": lambda x: context, "question": RunnablePassthrough()} | prompt_md | llm | StrOutputParser())
+    chain = ({"context": lambda x: context_data, "question": RunnablePassthrough()} | prompt_md | llm | StrOutputParser())
     
     with st.chat_message("assistant"):
         response = chain.invoke(prompt)
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
-        
