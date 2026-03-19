@@ -1,0 +1,15 @@
+[theme]
+primaryColor = "#4f46e5"           # indigo-600 — modern & professional
+backgroundColor = "#f8fafc"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#0f172a"
+font = "sans serif"
+
+[theme.font]
+google = "Inter"
+
+[client]
+toolbarMode = "viewer"             # hides hamburger menu & "Deploy" etc in viewer mode
+
+[browser]
+gatherUsageStats = false
